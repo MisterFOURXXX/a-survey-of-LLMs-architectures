@@ -28,7 +28,7 @@ def load_stacksample(
     Returns:
         Tuple of (questions, answers) as Polars DataFrames.
     """
-    data_path = Path(data_dir)
+    data_path = "/kaggle/input/datasets/stackoverflow/stacksample" #Path(data_dir)
 
     questions = pl.read_csv(
         data_path / "Questions.csv",
