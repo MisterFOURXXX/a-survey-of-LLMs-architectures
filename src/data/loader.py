@@ -1,7 +1,13 @@
 """Data loading utilities for the StackSample dataset."""
-import polars as pl
+import os
 from pathlib import Path
+
+import polars as pl
 from bs4 import BeautifulSoup
+
+
+# Default location — override with the `data_dir` argument.
+DEFAULT_DATA_DIR = "/kaggle/input/datasets/stackoverflow/stacksample"
 
 
 def clean_html(text: str) -> str:
@@ -13,7 +19,7 @@ def clean_html(text: str) -> str:
 
 
 def load_stacksample(
-    data_dir: str = "data",
+    data_dir: str | None = None,
     score_threshold: int = 5,
     max_questions: int = 100,
 ) -> tuple[pl.DataFrame, pl.DataFrame]:
@@ -22,22 +28,33 @@ def load_stacksample(
 
     Args:
         data_dir: Directory containing Questions.csv and Answers.csv.
+                  If None, falls back to DEFAULT_DATA_DIR (the Kaggle path).
         score_threshold: Minimum score to keep a row.
         max_questions: Maximum number of questions to keep.
 
     Returns:
         Tuple of (questions, answers) as Polars DataFrames.
     """
-    data_path = "/kaggle/input/datasets/stackoverflow/stacksample" #Path(data_dir)
+    # ── Resolve data path safely (Path object, not string) ──────────────
+    data_path = Path(data_dir) if data_dir else Path(DEFAULT_DATA_DIR)
+    data_path = data_path.expanduser().resolve()
+
+    questions_csv = data_path / "Questions.csv"
+    answers_csv = data_path / "Answers.csv"
+
+    if not questions_csv.exists():
+        raise FileNotFoundError(f"Missing file: {questions_csv}")
+    if not answers_csv.exists():
+        raise FileNotFoundError(f"Missing file: {answers_csv}")
 
     questions = pl.read_csv(
-        data_path / "Questions.csv",
+        questions_csv,
         encoding="utf8-lossy",
         columns=["Id", "Title", "Body", "Score"],
     ).filter(pl.col("Score") > score_threshold)
 
     answers = pl.read_csv(
-        data_path / "Answers.csv",
+        answers_csv,
         encoding="utf8-lossy",
         columns=["Id", "ParentId", "Body", "Score"],
     ).filter(pl.col("Score") > score_threshold)
