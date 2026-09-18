@@ -97,3 +97,5 @@ if __name__ == "__main__":
         print("\n✓ Ready to use. Run notebooks/01_fine_tuning_comparison.ipynb")
     else:
         print("\n✗ Setup incomplete. Check the errors above.")
+
+✗✓

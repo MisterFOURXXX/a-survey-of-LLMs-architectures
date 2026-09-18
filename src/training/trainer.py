@@ -11,6 +11,38 @@ from transformers import (
 from ..utils.monitoring import EpochMonitor
 
 
+# ─── Small helpers to enforce correct types ──────────────────────────────
+def _as_float(value, default: float) -> float:
+    """Coerce to float; supports '1e-4' strings from YAML."""
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _as_int(value, default: int) -> int:
+    """Coerce to int; supports '100' strings from YAML."""
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _as_bool(value, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "1", "yes", "on"}
+    return bool(value)
+
+
+# ─── Strategy conflict resolution ────────────────────────────────────────
 def _resolve_strategy_conflicts(
     save_strategy: str,
     eval_strategy: str,
@@ -25,6 +57,7 @@ def _resolve_strategy_conflicts(
         load_best_model_at_end = False
     elif load_best_model_at_end and save_strategy != eval_strategy:
         save_strategy = eval_strategy
+
     return save_strategy, eval_strategy, load_best_model_at_end
 
 
@@ -33,53 +66,69 @@ def build_training_args(cfg: dict) -> TrainingArguments:
     t = cfg.get("training", {})
     m = cfg.get("model", {})
 
-    eval_strategy = t.get("eval_strategy", "epoch")
-    save_strategy = t.get("save_strategy", "epoch")
-    load_best = t.get("load_best_model_at_end", True)
+    eval_strategy = str(t.get("eval_strategy", "epoch"))
+    save_strategy = str(t.get("save_strategy", "epoch"))
+    load_best = _as_bool(t.get("load_best_model_at_end"), True)
 
     save_strategy, eval_strategy, load_best = _resolve_strategy_conflicts(
         save_strategy, eval_strategy, load_best
     )
 
-    warmup_steps = t.get("warmup_steps", 100)
+    warmup_steps = _as_int(t.get("warmup_steps"), 100)
     if "warmup_ratio" in t and "warmup_steps" not in t:
+        # Approximate: 10% of ~500 total steps ≈ 50
         approx_total_steps = 50
-        warmup_steps = max(1, int(approx_total_steps * float(t["warmup_ratio"])))
+        warmup_steps = max(1, int(approx_total_steps * _as_float(t["warmup_ratio"], 0.1)))
 
-    return TrainingArguments(
+    args = TrainingArguments(
         output_dir=m["output_dir"],
         run_name=t.get("run_name", None),
-        num_train_epochs=t.get("num_train_epochs", 3),
-        per_device_train_batch_size=t.get("per_device_train_batch_size", 4),
-        per_device_eval_batch_size=t.get("per_device_eval_batch_size", 4),
-        gradient_accumulation_steps=t.get("gradient_accumulation_steps", 4),
-        learning_rate=t.get("learning_rate", 2e-5),
-        weight_decay=t.get("weight_decay", 0.01),
+
+        # ── Numeric fields: hard-cast to satisfy PyTorch ────────────────
+        num_train_epochs=_as_float(t.get("num_train_epochs"), 3.0),
+        per_device_train_batch_size=_as_int(t.get("per_device_train_batch_size"), 4),
+        per_device_eval_batch_size=_as_int(t.get("per_device_eval_batch_size"), 4),
+        gradient_accumulation_steps=_as_int(t.get("gradient_accumulation_steps"), 4),
+        learning_rate=_as_float(t.get("learning_rate"), 2e-5),
+        weight_decay=_as_float(t.get("weight_decay"), 0.01),
         warmup_steps=warmup_steps,
-        lr_scheduler_type=t.get("lr_scheduler_type", "cosine"),
-        max_grad_norm=t.get("max_grad_norm", 0.5),
-        logging_strategy=t.get("logging_strategy", "epoch"),
-        logging_steps=t.get("logging_steps", 10),
+        lr_scheduler_type=str(t.get("lr_scheduler_type", "cosine")),
+        max_grad_norm=_as_float(t.get("max_grad_norm"), 0.5),
+        save_total_limit=_as_int(t.get("save_total_limit"), 2),
+        logging_steps=_as_int(t.get("logging_steps"), 10),
+
+        # ── Non-numeric fields ──────────────────────────────────────────
+        logging_strategy=str(t.get("logging_strategy", "epoch")),
         eval_strategy=eval_strategy,
         save_strategy=save_strategy,
-        save_total_limit=t.get("save_total_limit", 2),
         load_best_model_at_end=load_best,
-        metric_for_best_model=t.get("metric_for_best_model", "eval_loss"),
-        greater_is_better=t.get("greater_is_better", False),
+        metric_for_best_model=str(t.get("metric_for_best_model", "eval_loss")),
+        greater_is_better=_as_bool(t.get("greater_is_better"), False),
         report_to=t.get("report_to", "none"),
-        bf16=t.get("bf16", True),
-        gradient_checkpointing=t.get("gradient_checkpointing", True),
-        optim=t.get("optim", "adamw_torch"),
-        remove_unused_columns=t.get("remove_unused_columns", False),
-        dataloader_pin_memory=t.get("dataloader_pin_memory", False),
-        group_by_length=t.get("group_by_length", False),
-        ddp_find_unused_parameters=t.get("ddp_find_unused_parameters", False),
+        bf16=_as_bool(t.get("bf16"), True),
+        gradient_checkpointing=_as_bool(t.get("gradient_checkpointing"), True),
+        optim=str(t.get("optim", "adamw_torch")),
+        remove_unused_columns=_as_bool(t.get("remove_unused_columns"), False),
+        dataloader_pin_memory=_as_bool(t.get("dataloader_pin_memory"), False),
+        group_by_length=_as_bool(t.get("group_by_length"), False),
+        ddp_find_unused_parameters=_as_bool(t.get("ddp_find_unused_parameters"), False),
     )
+    return args
 
 
 def run_training(model, tokenizer, dataset_dict, cfg: dict):
     """Execute training and return (trainer, monitor, train_result)."""
     training_args = build_training_args(cfg)
+
+    # Sanity check: the learning rate MUST be a float here, or PyTorch will
+    # throw `TypeError: '<=' not supported between instances of 'float' and 'str'`.
+    assert isinstance(training_args.learning_rate, float), (
+        f"learning_rate must be float, got {type(training_args.learning_rate)}: "
+        f"{training_args.learning_rate!r}"
+    )
+    assert isinstance(training_args.max_grad_norm, (int, float)), (
+        f"max_grad_norm must be numeric, got {training_args.max_grad_norm!r}"
+    )
 
     data_collator = DataCollatorForLanguageModeling(
         tokenizer=tokenizer, mlm=False
@@ -110,7 +159,11 @@ def print_training_results(trainer, monitor, train_result=None):
     print("=" * 60)
 
     log_history = trainer.state.log_history
-    val_losses = [log.get("eval_loss") for log in log_history if "eval_loss" in log]
+    val_losses = [
+        log.get("eval_loss")
+        for log in log_history
+        if "eval_loss" in log
+    ]
 
     rows = []
     for i, ep in enumerate(monitor.epoch_data):
