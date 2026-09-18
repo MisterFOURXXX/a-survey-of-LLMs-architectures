@@ -36,7 +36,7 @@ def load_stacksample(
         Tuple of (questions, answers) as Polars DataFrames.
     """
     # ── Resolve data path safely (Path object, not string) ──────────────
-    data_path = Path(data_dir) if data_dir else Path(DEFAULT_DATA_DIR)
+    data_path = Path(DEFAULT_DATA_DIR) # Path(data_dir) if data_dir else 
     data_path = data_path.expanduser().resolve()
 
     questions_csv = data_path / "Questions.csv"
