@@ -1,16 +1,12 @@
 """
 Trainer callbacks and runtime monitors.
-
-Re-exports the EpochMonitor / ResourceMonitor from utils.monitoring for
-convenience, and provides an EvaluationMonitor used at inference time.
 """
 import collections
-import threading
-import time
 
 import psutil
 
-from ..utils.monitoring import EpochMonitor, ResourceMonitor
+# NOTE: absolute imports, not relative.
+from utils.monitoring import EpochMonitor, ResourceMonitor
 
 
 class _NonThreadedResourceSampler:
@@ -32,9 +28,7 @@ class _NonThreadedResourceSampler:
 
     def record(self):
         if self.running:
-            self.cpu_samples.append(
-                psutil.cpu_percent(interval=self.interval)
-            )
+            self.cpu_samples.append(psutil.cpu_percent(interval=self.interval))
             self.memory_samples.append(psutil.virtual_memory().percent)
 
     def get_average(self) -> tuple[float, float]:
@@ -53,15 +47,6 @@ class _NonThreadedResourceSampler:
 class EvaluationMonitor:
     """
     Tracks per-query wall-clock time plus average CPU/memory during evaluation.
-
-    Usage:
-        mon = EvaluationMonitor()
-        mon.start()
-        ...
-        mon.record_query(elapsed_seconds)
-        ...
-        mon.stop()
-        summary = mon.get_summary()
     """
 
     def __init__(self, interval: float = 0.5):
@@ -108,8 +93,4 @@ class EvaluationMonitor:
         }
 
 
-__all__ = [
-    "EpochMonitor",
-    "ResourceMonitor",
-    "EvaluationMonitor",
-]
+__all__ = ["EpochMonitor", "ResourceMonitor", "EvaluationMonitor"]

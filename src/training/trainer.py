@@ -8,7 +8,9 @@ from transformers import (
     TrainingArguments,
 )
 
-from ..utils.monitoring import EpochMonitor
+# NOTE: absolute import, not relative.
+# The notebooks add `src/` to sys.path, so `training` is a top-level package.
+from utils.monitoring import EpochMonitor
 
 
 def _resolve_strategy_conflicts(
@@ -24,9 +26,7 @@ def _resolve_strategy_conflicts(
     if save_strategy == "no":
         load_best_model_at_end = False
     elif load_best_model_at_end and save_strategy != eval_strategy:
-        # Match save to eval so load_best_model_at_end works.
         save_strategy = eval_strategy
-
     return save_strategy, eval_strategy, load_best_model_at_end
 
 
@@ -43,17 +43,12 @@ def build_training_args(cfg: dict) -> TrainingArguments:
         save_strategy, eval_strategy, load_best
     )
 
-    # Warmup: prefer explicit steps; fall back to ratio (recomputed as steps later
-    # if needed). Since we can't know total steps here without the dataset, we
-    # simply pass warmup_steps and let the user configure it per-model.
     warmup_steps = t.get("warmup_steps", 100)
     if "warmup_ratio" in t and "warmup_steps" not in t:
-        # We approximate — the user can tune warmup_steps directly.
-        # A ratio of 0.1 with ~700 examples / eff_batch 16 / 3 epochs ≈ 43 steps.
-        approx_total_steps = 50  # conservative default
+        approx_total_steps = 50
         warmup_steps = max(1, int(approx_total_steps * float(t["warmup_ratio"])))
 
-    args = TrainingArguments(
+    return TrainingArguments(
         output_dir=m["output_dir"],
         run_name=t.get("run_name", None),
         num_train_epochs=t.get("num_train_epochs", 3),
@@ -82,7 +77,6 @@ def build_training_args(cfg: dict) -> TrainingArguments:
         group_by_length=t.get("group_by_length", False),
         ddp_find_unused_parameters=t.get("ddp_find_unused_parameters", False),
     )
-    return args
 
 
 def run_training(model, tokenizer, dataset_dict, cfg: dict):
@@ -118,11 +112,7 @@ def print_training_results(trainer, monitor, train_result=None):
     print("=" * 60)
 
     log_history = trainer.state.log_history
-    val_losses = [
-        log.get("eval_loss")
-        for log in log_history
-        if "eval_loss" in log
-    ]
+    val_losses = [log.get("eval_loss") for log in log_history if "eval_loss" in log]
 
     rows = []
     for i, ep in enumerate(monitor.epoch_data):
