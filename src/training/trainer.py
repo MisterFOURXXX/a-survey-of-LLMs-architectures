@@ -8,9 +8,7 @@ from transformers import (
     TrainingArguments,
 )
 
-# NOTE: absolute import, not relative.
-# The notebooks add `src/` to sys.path, so `training` is a top-level package.
-from utils.monitoring import EpochMonitor
+from ..utils.monitoring import EpochMonitor
 
 
 def _resolve_strategy_conflicts(

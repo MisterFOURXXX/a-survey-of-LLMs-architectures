@@ -5,8 +5,7 @@ import collections
 
 import psutil
 
-# NOTE: absolute imports, not relative.
-from utils.monitoring import EpochMonitor, ResourceMonitor
+from ..utils.monitoring import EpochMonitor, ResourceMonitor
 
 
 class _NonThreadedResourceSampler:
