@@ -1,8 +1,15 @@
-"""Configuration loading and merging."""
-import os
+"""Configuration loading, merging, and numeric-type sanitization."""
+import re
 from pathlib import Path
 
 import yaml
+
+
+# Matches: 1e-4, 2E-5, 3.14, .5, -0.1, 100
+_FLOAT_RE = re.compile(
+    r"^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$"
+)
+_INT_RE = re.compile(r"^[+-]?\d+$")
 
 
 def load_config(
@@ -12,67 +19,24 @@ def load_config(
     """
     Load a model config and deep-merge it with the base config.
 
-    Resolution order for `base_config.yaml`:
-        1. Explicit `base_config_path` if provided.
-        2. `$STACKSAMPLE_CONFIG_DIR/base_config.yaml`, if that env var is set.
-        3. Same directory as the model config.
-        4. `./configs/base_config.yaml` relative to CWD.
-        5. `<model_config_parent>/../configs/base_config.yaml` (repo layout).
-        6. Walking up the tree looking for `configs/base_config.yaml`.
+    After merging, numeric-looking strings (e.g. '1e-4', '0.05', '100') are
+    coerced to their proper Python types. This is required because PyYAML's
+    YAML 1.1 rules parse `1e-4` (no decimal point) as a *string*, not a float.
     """
-    model_path = Path(model_config_path).expanduser().resolve()
-    if not model_path.exists():
-        raise FileNotFoundError(f"Model config not found at {model_path}")
+    model_path = Path(model_config_path).resolve()
 
-    base_path = _resolve_base_config(model_path, base_config_path)
+    if base_config_path is None:
+        base_path = model_path.parent / "base_config.yaml"
+    else:
+        base_path = Path(base_config_path).resolve()
 
     if not base_path.exists():
-        raise FileNotFoundError(
-            f"Base config not found at {base_path}\n"
-            f"Searched relative to model config: {model_path}"
-        )
+        raise FileNotFoundError(f"Base config not found at {base_path}")
 
     base = _load_yaml(base_path)
     override = _load_yaml(model_path)
-    return _deep_merge(base, override)
-
-
-def _resolve_base_config(model_path: Path, explicit: str | None) -> Path:
-    if explicit:
-        return Path(explicit).expanduser().resolve()
-
-    env_dir = os.environ.get("STACKSAMPLE_CONFIG_DIR")
-    if env_dir:
-        candidate = Path(env_dir) / "base_config.yaml"
-        if candidate.exists():
-            return candidate
-
-    # Same dir as model config
-    candidate = model_path.parent / "base_config.yaml"
-    if candidate.exists():
-        return candidate
-
-    # CWD/configs
-    candidate = Path.cwd() / "configs" / "base_config.yaml"
-    if candidate.exists():
-        return candidate
-
-    # Sibling layout: <parent>/../configs/base_config.yaml
-    candidate = model_path.parent.parent / "configs" / "base_config.yaml"
-    if candidate.exists():
-        return candidate
-
-    # Walk up the tree
-    for parent in model_path.parents:
-        candidate = parent / "configs" / "base_config.yaml"
-        if candidate.exists():
-            return candidate
-        candidate = parent / "base_config.yaml"
-        if candidate.exists():
-            return candidate
-
-    # None found — return the sibling expectation so the error message is clear
-    return model_path.parent / "base_config.yaml"
+    merged = _deep_merge(base, override)
+    return _sanitize_numerics(merged)
 
 
 def _load_yaml(path: Path) -> dict:
@@ -93,3 +57,30 @@ def _deep_merge(base: dict, override: dict) -> dict:
         else:
             result[key] = value
     return result
+
+
+def _sanitize_numerics(obj):
+    """
+    Recursively convert numeric-looking strings to int or float.
+
+    Handles the PyYAML quirk where values like `1e-4` are parsed as strings
+    instead of floats. Ints are tried first, then floats.
+    """
+    if isinstance(obj, dict):
+        return {k: _sanitize_numerics(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_numerics(v) for v in obj]
+    if isinstance(obj, str):
+        stripped = obj.strip()
+        if _INT_RE.match(stripped):
+            try:
+                return int(stripped)
+            except ValueError:
+                pass
+        if _FLOAT_RE.match(stripped):
+            try:
+                return float(stripped)
+            except ValueError:
+                pass
+        return obj
+    return obj
