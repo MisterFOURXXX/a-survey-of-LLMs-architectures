@@ -29,14 +29,14 @@ def setup_kaggle_credentials():
 
     if kaggle_json.exists():
         os.chmod(kaggle_json, 0o600)
-        print(f"✓ Kaggle credentials found at {kaggle_json}")
+        print(f" Kaggle credentials found at {kaggle_json}")
         return True
 
     if os.environ.get("KAGGLE_USERNAME") and os.environ.get("KAGGLE_KEY"):
-        print("✓ Using KAGGLE_USERNAME and KAGGLE_KEY environment variables")
+        print(" Using KAGGLE_USERNAME and KAGGLE_KEY environment variables")
         return True
 
-    print("✗ No Kaggle credentials found.")
+    print(" No Kaggle credentials found.")
     print(f"  Download your API token from {DATASET_URL}")
     print(f"  and place kaggle.json in {kaggle_dir}/")
     return False
@@ -62,9 +62,9 @@ def download_dataset():
         with zipfile.ZipFile(zip_path, "r") as z:
             z.extractall(DATA_DIR)
         zip_path.unlink()
-        print(f"✓ Dataset extracted to {DATA_DIR}/")
+        print(f" Dataset extracted to {DATA_DIR}/")
     else:
-        print(f"✗ Expected zip file not found at {zip_path}")
+        print(f" Expected zip file not found at {zip_path}")
 
 
 def verify_files():
@@ -73,10 +73,10 @@ def verify_files():
     missing = [f for f in required if not (DATA_DIR / f).exists()]
 
     if missing:
-        print(f"✗ Missing files: {missing}")
+        print(f" Missing files: {missing}")
         return False
 
-    print("✓ All required files present:")
+    print(" All required files present:")
     for f in required:
         size_mb = (DATA_DIR / f).stat().st_size / (1024 * 1024)
         print(f"    {f}: {size_mb:.1f} MB")
@@ -94,8 +94,6 @@ if __name__ == "__main__":
     download_dataset()
 
     if verify_files():
-        print("\n✓ Ready to use. Run notebooks/01_fine_tuning_comparison.ipynb")
+        print("\n Ready to use.")
     else:
-        print("\n✗ Setup incomplete. Check the errors above.")
-
-✗✓
+        print("\n Setup incomplete. Check the errors above.")

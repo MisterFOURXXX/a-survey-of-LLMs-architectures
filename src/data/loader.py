@@ -6,10 +6,6 @@ import polars as pl
 from bs4 import BeautifulSoup
 
 
-# Default location — override with the `data_dir` argument.
-DEFAULT_DATA_DIR = "/kaggle/input/datasets/stackoverflow/stacksample"
-
-
 def clean_html(text: str) -> str:
     """Remove HTML tags from text."""
     if not text:
@@ -28,7 +24,6 @@ def load_stacksample(
 
     Args:
         data_dir: Directory containing Questions.csv and Answers.csv.
-                  If None, falls back to DEFAULT_DATA_DIR (the Kaggle path).
         score_threshold: Minimum score to keep a row.
         max_questions: Maximum number of questions to keep.
 
@@ -36,7 +31,7 @@ def load_stacksample(
         Tuple of (questions, answers) as Polars DataFrames.
     """
     # ── Resolve data path safely (Path object, not string) ──────────────
-    data_path = Path(DEFAULT_DATA_DIR) # Path(data_dir) if data_dir else 
+    data_path = Path(data_dir)
     data_path = data_path.expanduser().resolve()
 
     questions_csv = data_path / "Questions.csv"
