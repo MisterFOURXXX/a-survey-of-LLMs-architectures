@@ -151,7 +151,7 @@ The 2026 generation of "Native Multimodal" models uses Visual Quantization (such
 | **Byte-Pair Encoding (BPE)** | GPT-2, GPT-4 (Tiktoken), Llama 3, Qwen 3 | Iteratively merge the most frequent adjacent byte pairs. |
 | **WordPiece** | BERT, Gemma | Similar to BPE but merges by likelihood rather than frequency. |
 | **SentencePiece / Unigram** | Llama 2, T5, Gemma-3 | Operates on a raw character stream (`_` for space); supports subword regularization. |
-| **Tiktoken (large-vocab BPE)** | GPT-4o (200k), Llama 3 (128k), Qwen 3 (152k), Gemma-3 (256k) | Whole technical terms → a single token; dramatically reduces sequence length. |
+| **Tiktoken (large-vocab BPE)** | GPT-4o (200k), Llama 3 (128k), Qwen 3 (152k), Gemma-3 (256k) | Whole technical terms -> a single token; dramatically reduces sequence length. |
 | **UTF-8 Byte Fallback** | All modern tokenizers | Guarantees no out-of-vocabulary tokens by falling back to raw bytes for rare codepoints. |
 
 #### Attention Mechanisms
@@ -168,7 +168,7 @@ The standard Multi-Head Attention (MHA) was the primary bottleneck of early mode
 
 | Variant | Where used | Trade-off |
 |---------|------------|-----------|
-| **Grouped-Query Attention (GQA)** | Llama 3.1, Qwen 3, Falcon 3, Phi-3.5, SmolLM3, Gemma 3 | Multiple Query heads share one KV head → ~8× smaller KV cache, near-identical quality. |
+| **Grouped-Query Attention (GQA)** | Llama 3.1, Qwen 3, Falcon 3, Phi-3.5, SmolLM3, Gemma 3 | Multiple Query heads share one KV head -> ~8× smaller KV cache, near-identical quality. |
 | **Multi-Head Latent Attention (MLA)** | DeepSeek-V2-Lite, DeepSeek-R1 | Compress K and V into a low-rank latent vector; up-project at inference. |
 | **Sliding Window Attention (SWA)** | Mistral, Ministral 3, Falcon | Each token attends to a fixed window of the past; receptive field grows with depth. |
 | **Flash Attention-3** | All 8B+ training runs | IO-aware kernel; makes attention ~2–4× faster on Ampere/Hopper. |
@@ -874,8 +874,8 @@ The StackSample dataset is hosted on Kaggle and requires an API token.
 Go to <https://www.kaggle.com> and register.
 
 **Step 2 — Generate an API token**
-1. Click your avatar (top-right) → **Settings**
-2. Scroll to **API** → click **Create New Token**
+1. Click your avatar (top-right) -> **Settings**
+2. Scroll to **API** -> click **Create New Token**
 3. A file `kaggle.json` will be downloaded. It contains:
 
 ```json
@@ -885,8 +885,9 @@ Go to <https://www.kaggle.com> and register.
 **Step 3 — Place the token where the Kaggle CLI expects it**
 
 ```bash
+pip install kaggle
 mkdir -p ~/.kaggle
-mv ~/Downloads/kaggle.json ~/.kaggle/kaggle.json
+mv your_download_dirctory/kaggle.json ~/.kaggle/
 chmod 600 ~/.kaggle/kaggle.json
 ```
 
@@ -926,8 +927,8 @@ pip install -e .
 
 # 5. (Optional) Authenticate with Hugging Face for gated models
 huggingface-cli login
-#  → paste a token from https://huggingface.co/settings/tokens
-#  → required for meta-llama/Llama-3.1-8B-Instruct
+# paste a token from https://huggingface.co/settings/tokens
+# required for meta-llama/Llama-3.1-8B-Instruct
 ```
 
 **Optional — Flash Attention 2** (only for 8B+ training runs):
@@ -972,24 +973,9 @@ Ready to use. Run notebooks/01_fine_tuning_comparison.ipynb
 **Option B — Download manually**
 
 ```bash
-mkdir -p data
-kaggle datasets download -d stackoverflow/stacksample -p data
-unzip data/stacksample.zip -d data/
-```
-
-**Option C — Use a temporary working copy**
-
-If your dataset lives elsewhere (e.g. a mounted SSD), just point `data_dir`
-at it when calling `load_stacksample()`:
-
-```python
-from src.data.loader import load_stacksample
-
-questions, answers = load_stacksample(
-    data_dir="/mnt/ssd/stacksample",
-    score_threshold=5,
-    max_questions=100,
-)
+import kaggle
+kaggle.api.authenticate()
+kaggle.api.dataset_download_files("stackoverflow/stacksample", path="/a-survey-of-LLMs-architectures/data",unzip=True)
 ```
 
 > **Note on memory.** `Answers.csv` is 1.61 GB; `Questions.csv` is 1.92 GB. The
@@ -1154,12 +1140,12 @@ Fine-tuning results (StackSample Q&A, 3 epochs, RTX A4000/A100):
 
 | Model | Technique | Epoch time | Final train loss | Val loss trajectory |
 |-------|-----------|------------|------------------|---------------------|
-| Pythia-410M | Full FT | 18.4 s | 1.77 | 2.60 → 3.20 → 3.08 |
-| GPT-2-medium | Full FT | 35.9 s | 2.08 | 2.79 → 2.88 → 2.92 |
-| Llama-3.1-8B | QLoRA (r=64) | 197.9 s | 1.68 | 2.06 → 2.02 → 2.05 |
-| Qwen3-8B | QLoRA (r=64) | 197.6 s | 1.73 | 2.15 → 2.15 → 2.25 |
+| Pythia-410M | Full FT | 18.4 s | 1.77 | 2.60 -> 3.20 -> 3.08 |
+| GPT-2-medium | Full FT | 35.9 s | 2.08 | 2.79 -> 2.88 -> 2.92 |
+| Llama-3.1-8B | QLoRA (r=64) | 197.9 s | 1.68 | 2.06 -> 2.02 -> 2.05 |
+| Qwen3-8B | QLoRA (r=64) | 197.6 s | 1.73 | 2.15 -> 2.15 -> 2.25 |
 | Phi-3.5-MoE | BF16 LoRA (r=16, q/v) | — | — | (requires ≥ 80 GB) |
-| Phi-3.5-mini | QLoRA (r=16) | 213.9 s | 9.17 | 9.58 → 8.88 → 8.76 |
+| Phi-3.5-mini | QLoRA (r=16) | 213.9 s | 9.17 | 9.58 -> 8.88 -> 8.76 |
 
 Evaluation results (greedy decoding unless noted):
 
@@ -1210,7 +1196,7 @@ relevance — exactly the opposite of what you'd want for storytelling tasks.
 |--------|------|-------|
 | `Id` | int | 80 – 40M |
 | `OwnerUserId` | int | 631k unique |
-| `CreationDate` | datetime | 2008-08 → 2016-10 |
+| `CreationDate` | datetime | 2008-08 -> 2016-10 |
 | `ClosedDate` | datetime | ~96% NA |
 | `Score` | int | mean 1.78, max 5190 |
 | `Title` | str | short headline |
@@ -1222,8 +1208,8 @@ relevance — exactly the opposite of what you'd want for storytelling tasks.
 |--------|------|-------|
 | `Id` | int | 92 – 40M |
 | `OwnerUserId` | int | 469k unique |
-| `CreationDate` | datetime | 2008-08 → 2016-10 |
-| `ParentId` | int | FK → `Questions.Id` |
+| `CreationDate` | datetime | 2008-08 -> 2016-10 |
+| `ParentId` | int | FK -> `Questions.Id` |
 | `Score` | int | mean 2.48, max 5718 |
 | `Body` | str (HTML) | full answer text |
 
