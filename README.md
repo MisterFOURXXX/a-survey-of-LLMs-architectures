@@ -1,10 +1,12 @@
 # A Survey of LLM Architectures
 
-[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-orange)](https://pytorch.org/)
-[![Transformers](https://img.shields.io/badge/transformers-4.40%2B-yellow)](https://huggingface.co/docs/transformers)
-[![PEFT](https://img.shields.io/badge/peft-0.10%2B-green)](https://huggingface.co/docs/peft)
-[![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey)](LICENSE)
+> A reproducible research workbench for studying, fine-tuning, and evaluating modern Large Language Models (LLMs) across five architectural families: **GPT-style dense decoders**, **Mixture-of-Experts (MoE)**, **Hybrid SSM–Transformer**, **Large Reasoning Models (LRMs)**, and **Small Language Models (SLMs)**. Every experiment is driven by YAML configuration, orchestrated through a modular Python package, and evaluated with intrinsic (perplexity) and extrinsic (ROUGE, BLEU, generation-strategy comparison) metrics.
+
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/pytorch-2.10%2B-ee4c2c.svg)](https://pytorch.org/)
+[![Transformers](https://img.shields.io/badge/transformers-4.57-yellow.svg)](https://huggingface.co/docs/transformers)
+[![PEFT](https://img.shields.io/badge/peft-0.19-orange.svg)](https://huggingface.co/docs/peft)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
